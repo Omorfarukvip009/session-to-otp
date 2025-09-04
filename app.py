@@ -1,35 +1,44 @@
-import asyncio, sys, re
-from telethon import TelegramClient, events, errors
+from flask import Flask, render_template, request, jsonify
+import subprocess, os
 
-if len(sys.argv) < 4:
-    print("Usage: python login.py <API_ID> <API_HASH> <SESSION_FILE>")
-    sys.exit(1)
+app = Flask(__name__)
+UPLOAD_FOLDER = "sessions"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-API_ID = int(sys.argv[1])
-API_HASH = sys.argv[2]
-SESSION_FILE = sys.argv[3]
+API_ID = 21599456
+API_HASH = "92adb31104272bb579d57fbfe88b960d"
 
-async def main():
-    client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
-    await client.start()  # fully async, handles connect + authorization
-    print("✅ User Authorized!")
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-    # Listen for Telegram OTP messages from 777000
-    @client.on(events.NewMessage(from_users=777000))
-    async def get_otp_msg(event):
-        otp = re.search(r'\b(\d{5})\b', event.raw_text)
-        if otp:
-            print(f"OTP received: {otp.group(0)}")
-            await client.disconnect()
-            sys.exit(0)
+@app.route("/upload_run", methods=["POST"])
+def upload_run():
+    if "session_file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
 
-    print("―― Waiting for OTP messages...")
-    await client.run_until_disconnected()
+    file = request.files["session_file"]
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
 
-try:
-    asyncio.run(main())
-except errors.RPCError as e:
-    print(f"―― ❌ RPC error: {e}")
-except Exception as e:
-    print(f"―― ❌ Unexpected error: {e}")
+    session_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(session_path)
+
+    try:
+        # Run login.py and capture full output
+        result = subprocess.run(
+            ["python", "login.py", str(API_ID), API_HASH, session_path],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        output = result.stdout + result.stderr
+    except Exception as e:
+        output = str(e)
+
+    return jsonify({"output": output})
+
+if __name__ == "__main__":
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=8080)
     
