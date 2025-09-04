@@ -4,32 +4,54 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Telegram Session Login</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+#output_box {
+    @apply border border-gray-300 p-4 rounded-lg h-96 overflow-auto bg-gray-100 text-gray-900;
+    font-family: monospace;
+    transition: all 0.3s ease-in-out;
+}
+button {
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+button:hover {
+    transform: scale(1.05);
+    background-color: #2563eb;
+}
+</style>
 <script>
 async function runLogin() {
     const fileInput = document.getElementById("session_file");
-    if (!fileInput.files.length) {
-        alert("Please select a .session file");
-        return;
-    }
+    if (!fileInput.files.length) { alert("Please select a .session file"); return; }
 
     const formData = new FormData();
     formData.append("session_file", fileInput.files[0]);
 
+    const outputBox = document.getElementById("output_box");
+    outputBox.innerHTML = "<p class='text-blue-500'>Running... please wait!</p>";
+
     const res = await fetch("/upload_run", { method: "POST", body: formData });
     const data = await res.json();
 
-    const outputBox = document.getElementById("output_box");
     outputBox.innerHTML = `<pre>${data.output}</pre>`;
+}
+
+function nextSession() {
+    document.getElementById("output_box").innerHTML = "";
+    document.getElementById("session_file").value = "";
 }
 </script>
 </head>
-<body>
-<h2>Telegram Session Login</h2>
+<body class="bg-gradient-to-r from-purple-500 to-pink-500 min-h-screen flex flex-col items-center justify-center text-white">
+<h2 class="text-3xl font-bold mb-6 animate-bounce">Telegram Session Login</h2>
 
-<input type="file" id="session_file" accept=".session">
-<button onclick="runLogin()">Run</button>
+<div class="bg-white p-6 rounded-xl shadow-xl w-11/12 md:w-1/2 flex flex-col items-center gap-4">
+<input type="file" id="session_file" accept=".session" class="border p-2 rounded w-full text-black">
+<button onclick="runLogin()" class="bg-blue-500 text-white px-6 py-2 rounded font-semibold w-full">Run Session</button>
+<button onclick="nextSession()" class="bg-gray-500 text-white px-6 py-2 rounded font-semibold w-full">Next Session</button>
 
-<h3>Output</h3>
-<div id="output_box" style="border:1px solid #ccc; padding:10px; height:400px; overflow:auto;"></div>
+<h3 class="mt-4 text-gray-700 font-bold">Output</h3>
+<div id="output_box" class="w-full"></div>
+</div>
 </body>
 </html>
