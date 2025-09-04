@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram Session Login</title>
+<script>
+async function uploadSession() {
+    const fileInput = document.getElementById("session_file");
+    const formData = new FormData();
+    formData.append("session_file", fileInput.files[0]);
+
+    const res = await fetch("/upload", { method: "POST", body: formData });
+    const data = await res.json();
+    alert(data.message);
+    startLogPolling();
+}
+
+let logInterval;
+async function startLogPolling() {
+    const logTable = document.getElementById("log_table");
+    if (logInterval) clearInterval(logInterval);
+
+    logInterval = setInterval(async () => {
+        const res = await fetch("/logs");
+        const data = await res.json();
+        logTable.innerHTML = `<tr><td>${data.logs.replace(/\n/g, "<br>")}</td></tr>`;
+    }, 2000);
+}
+
+async function nextSession() {
+    await fetch("/next", { method: "POST" });
+    document.getElementById("log_table").innerHTML = "";
+    alert("Ready for next session!");
+}
+</script>
+</head>
+<body>
+<h2>Telegram Login</h2>
+
+<input type="file" id="session_file">
+<button onclick="uploadSession()">Upload & Login</button>
+<button onclick="nextSession()">Next Session</button>
+
+<h3>Logs</h3>
+<table border="1" id="log_table">
+<tr><td></td></tr>
+</table>
+</body>
+</html>
